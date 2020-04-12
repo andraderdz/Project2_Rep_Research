@@ -1,0 +1,132 @@
+---
+title: "PA1_template"
+author: "Ricardo Andrade"
+date: "5/4/2020"
+output: html_document
+---
+
+## 1. Data procesing
+
+ We will first read the csv file to load it to the R enviroment, save it in the data variable and do a little a general exploring to see the type of data and its summary:
+
+```{r cars}
+data<-read.csv("C:/Users/Ricardo/Desktop/Coursera/Data Science Specialization/Reproducible Research/Week 2/Project/activity.csv",stringsAsFactors = F)
+str(data)
+summary(data)
+head(data)
+```
+
+## 2. Histogram
+
+The Histogram of the total number of steps taken each day is the following:
+
+```{r processing2, echo=FALSE, message=FALSE, warning=FALSE}
+library(lubridate)
+library(data.table)
+data<-data[complete.cases(data),]
+data$day<-day(data$date)
+data$month<-month(data$date)
+data<-as.data.table(data)
+days<-data[,sum(steps),by=day]
+par(mar=c(1,1,1,1))
+```
+
+```{r histogram, echo=FALSE}
+barplot(days$V1,main="Steps taken each day", xlab="Days" )
+```
+
+## 3. Mean and Median of each day
+
+The mean for each day is:
+```{r mean, echo=FALSE}
+mean(data[,sum(steps),by=day]$V1)
+```
+
+The median fo each day is:
+
+```{r median, echo=FALSE}
+median(data[,sum(steps),by=day]$V1)
+```
+
+## 4. Average daily activity
+
+The time series for Average daily activity in each interval is:
+
+```{r daily_activity}
+x<-data[,mean(steps),by=interval]
+plot(x$V1,main="Average daily activity", xlab="5 min Interval",type="l")
+```
+
+## 5. Maximum Number of Steps Interval
+
+The interval with the maximum average steps is:
+
+```{r max}
+max<-x[order(-x$V1),]
+max[order(-max$V1),][1,1]
+```
+
+## 6. Managing Missing Data
+
+ As we can see in our previous summary we notice **there's 2304 NA's values in the data, specifically in the Steps variable**. The idea to fill up those empty values is first add a value that will record the number of the row where the value is missing (we will load up the "activity" file again because the previous file had no NA's)
+ 
+```{r missing1} 
+data<-read.csv("C:/Users/Ricardo/Desktop/Coursera/Data Science Specialization/Reproducible Research/Week 2/Project/activity.csv",stringsAsFactors = F) 
+data<-as.data.table(data)
+data$rows<-1:nrow(data)
+``` 
+
+Then we weill save the "date","interval" and "rows" variables where the NA's is present
+
+```{r missing2}
+y<-data[!complete.cases(data),c(2,3,4)]
+```
+
+In section 4 we generated the average for each interval and saved it into the "x" variable, so now we will merge those two arrays by the "interval" variable and that will asign the  daily average value to the NA's in its proper "interval" variable as follows
+
+```{r missing3, warning=FALSE}
+new_array<-merge(y,x)
+data[new_array$rows,1]<-new_array$V1
+summary(data)
+```
+
+## 7. New Histogram for Average daily activity
+
+As we can see in the previous summary there's no NA's anymore in the "steps" variable. The changes are clear whwn we plot the **new histogram**:
+
+```{r missing4, echo=FALSE}
+data$day<-day(data$date)
+days<-data[,sum(steps),by=day]
+barplot(days$V1,main="Steps taken each day", xlab="Days" )
+```
+
+The new mean and median for each day is:
+```{r mean2, echo=FALSE}
+mean(data[,sum(steps),by=day]$V1)
+median(data[,sum(steps),by=day]$V1)
+```
+
+## 8. Weekend vs Weekday Activity 
+
+Now we want to observe the differences in the subject's behaviour according the weekends and weekdays. For that we create a little function and use it to create a vector to define (label) if the day is a weekday or a weekend.
+
+```{r weekdays}
+weekdays<-sapply(data$date,function(x) {if(wday(x)<2 | wday(x)>6){"weekend"}else{"weekday"}})
+data<-cbind(data,weekdays)
+```
+
+then we plot the results
+
+```{r weekdays2}
+data<-as.data.table(data)
+wd<-data[weekdays=="weekday",mean(steps),by=interval]
+we<-data[weekdays=="weekend",mean(steps),by=interval]
+
+windows(width=15, height=8)  
+plot(wd$V1,main="Average daily activity", xlab="5 min Interval",ylab="Steps",type="l",col="blue")
+lines(we$V1,col="red")
+legend("topright", inset=.05,cex = 1.2,c("weekday","weekend"), fill=c("blue","red"))
+
+```
+
+
